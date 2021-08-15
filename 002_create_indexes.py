@@ -1,16 +1,32 @@
 #!/usr/bin/env python3
 
-'''Creates index.html files for subfolders in the current directory. Works when run in the same directory as 
-'''
 
 from os import listdir, getcwd
 from os.path import isfile, join
 
 
-index_template = '''
+preamble= '''
 <!DOCTYPE html>
 <html>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+}
+.imgbox {
+    display: grid;
+    height: 100%;
+}
+.center-fit {
+    max-width: 100%;
+    max-height: 100vh;
+    margin: auto;
+}
+</style>
 <body>
+'''
+
+index_template = '''
 <h1 style="margin-bottom: 80px;">{description}</h1>
 {imagelist}
 </body>
@@ -27,9 +43,9 @@ def main():
         if not isfile(full_path):
             imgfiles = sorted(listdir(full_path))
             imgfiles = [x for x in imgfiles if '.jp' in x]
-            linefmt = '<div style="text-align:center";><img src="{}" style="width:100%; margin-top: 40px;"><p>{}</p></div>'
+            linefmt = '<div style="text-align:center;" class="imgbox"><img src="{}" style="margin-top: 40px;" class="center-fit"><p>{}</p></div>'
             imghtml = "\n".join([linefmt.format(x, x) for x in imgfiles])
-            contents = index_template.format(imagelist=imghtml, description=thing)
+            contents = preamble+index_template.format(imagelist=imghtml, description=thing)
             with open(join(full_path, "index.html"), 'w+') as indexfile:
                 indexfile.write(contents)
             print('writing index file:', join(full_path, "index.html"))
