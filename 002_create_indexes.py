@@ -12,6 +12,7 @@ preamble= '''
 * {
     margin: 0;
     padding: 0;
+    background: lightgrey;
 }
 h1 {
     font-size: 4vw;
@@ -23,7 +24,7 @@ h1 {
 }
 .center-fit {
     max-width: 100%;
-    max-height: 100vh;
+    max-height: 99vh;
     margin: auto;
 }
 
@@ -64,7 +65,8 @@ index_template = '''
 
 def main():
     present_dir = getcwd()
-    files = listdir(present_dir)
+    files = sorted(listdir(present_dir))
+    files = [x for x in files if x[0] != '.']
     print(files)
 
     subdir_imgs = dict()
@@ -73,14 +75,16 @@ def main():
     # the images in the folder in alphanumeric order (001.jpg then 002.jpg then
     # 003.png, etc).
     print("Writing index files: ", end="")
-    for thing in files:
-        if thing[0] == '.': continue
+    for idx in range(len(files)):
+        thing = files[idx]
         full_path = join(present_dir, thing)
         if not isfile(full_path):
             imgfiles = sorted(listdir(full_path))
             imgfiles = [x for x in imgfiles if '.jp' in x]
             linefmt = '<div style="text-align:center;" class="imgbox"><img src="{}" style="margin-top: 40px;" class="center-fit"><p>{}</p></div>'
             imghtml = "\n".join([linefmt.format(x, x) for x in imgfiles])
+            if idx < len(files)-1:
+                imghtml += f'\n<h1><a href="../{files[idx+1]}/">NEXT >></a></h1>'
             contents = preamble+index_template.format(imagelist=imghtml, description=thing)
             with open(join(full_path, "index.html"), 'w+') as indexfile:
                 indexfile.write(contents)
@@ -93,8 +97,8 @@ def main():
 
     curfoldername = split(present_dir)[-1]
     prvgrid = '<div class="preview-grid">{preview_rows}</div>'
-    linefmt = '<div class="comic_page"><a href="{foldername}">{foldername}</a></div><div class="image_list"><a href="{foldername}">{images}</a></div>'
-    imgsfmt = '<img src="{}">'
+    linefmt = '<div class="comic_page"><a href="{foldername}/">{foldername}</a></div><div class="image_list"><a href="{foldername}/">{images}</a></div>'
+    imgsfmt = '<img src="{}" loading="lazy">'
 
     def create_folderprev(foldername, imagefiles):
         imgpaths = imagefiles[:3]
