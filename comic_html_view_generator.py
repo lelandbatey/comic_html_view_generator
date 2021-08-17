@@ -3,7 +3,9 @@
 from os import listdir, getcwd, walk
 from os.path import isfile, join, split, abspath, relpath
 from pathlib import Path
+import mimetypes
 import argparse
+import base64
 import shutil
 import sys
 
@@ -57,10 +59,14 @@ h1 {
     vertical-align: middle;
 }
 </style>
-<body>
 '''
 
 index_template = '''
+<head>
+    <meta charset=utf-8 />
+    <title>{description}</title>
+</head>
+<body>
 <h1 style="margin-bottom: 80px;">{description}</h1>
 {imagelist}
 </body>
@@ -113,6 +119,18 @@ def build_filetree(source_path, suffix_allowlist=None):
     return desired_files
 
 
+def create_image_datauri(full_imagepath):
+    '''Creates a data URI suitable to be used in the 'src' attribute of an HTML
+    <img> tag, allowing for totally self-contained HTML documents.'''
+    mtype, _ = mimetypes.guess_type(full_imagepath)
+    b64data = None
+    with open(full_imagepath, 'rb') as img:
+        imgdata = img.read()
+        b64data = base64.b64encode(imgdata).decode('utf-8')
+    datauri = f'data:{mtype};charset=utf-8;base64,{b64data}'
+    return datauri
+
+
 def mirror_unzip_cbz(source_path, dest_path):
     ''' Replicates a directory structure with CBZ files in it into a new
     location, but with the cbz files expanded into directories with images. '''
@@ -153,7 +171,7 @@ def mirror_unzip_cbz(source_path, dest_path):
                     shutil.copyfileobj(source, target)
 
 
-def create_comic_display_htmlfiles(source_path):
+def create_comic_display_htmlfiles(source_path, embed_images=False):
     '''Finds directories with images in them, then creates "index.html" files
     in each directory which embed those images in alphanumeric order. Does not
     create an "overall" HTML file for listing and browsing all the folders of
@@ -163,19 +181,22 @@ def create_comic_display_htmlfiles(source_path):
     for idx in range(len(ordered_keys)):
         reltpth = ordered_keys[idx]
         imgfiles = image_folders[reltpth]
-        full_path = join(source_path, reltpth)
+        full_dir_path = join(source_path, reltpth)
         linefmt = '<div style="text-align:center;" class="imgbox"><img src="{}" style="margin-top: 40px;" class="center-fit"><p>{}</p></div>'
-        imghtml = "\n".join([linefmt.format(x, x) for x in imgfiles])
+        make_image_url = lambda imgpath: imgpath
+        if embed_images:
+            make_image_url = lambda imgpath: create_image_datauri(join(full_dir_path, imgpath))
+        imghtml = "\n".join([linefmt.format(make_image_url(x), x) for x in imgfiles])
         # Link to the next directory of comics if there are more
         if idx < len(ordered_keys) - 1:
             relative_path_to_next = relpath(reltpth, ordered_keys[idx])
             imghtml += f'\n<h1><a href="../{relative_path_to_next}/">NEXT >></a></h1>'
         contents = preamble + index_template.format(imagelist=imghtml, description=reltpth)
-        with open(join(full_path, 'index.html'), 'w+') as indexfile:
+        with open(join(full_dir_path, 'index.html'), 'w+') as indexfile:
             indexfile.write(contents)
 
 
-def create_comic_browse_htmlfiles(source_path):
+def create_comic_browse_htmlfiles(source_path, embed_images=False):
     '''Creates a "BROWSE_HERE.html" file at the top of source_path, which
     generates a kind of "overview" or "browsable list" page which links to all
     the other index.html files in subdirectories of source_path. '''
@@ -188,7 +209,10 @@ def create_comic_browse_htmlfiles(source_path):
     def create_folderprev(foldername, imagefiles):
         imgpaths = imagefiles[:3]
         imgpaths = [join(foldername, x) for x in imgpaths]
-        imgshtml = '\n'.join([imgsfmt.format(x) for x in imgpaths])
+        make_image_url = lambda imgpath: imgpath
+        if embed_images:
+            make_image_url = lambda imgpath: create_image_datauri(join(source_path, imgpath))
+        imgshtml = '\n'.join([imgsfmt.format(make_image_url(x)) for x in imgpaths])
         return linefmt.format(foldername=foldername, images=imgshtml)
 
     subdir_imgs = build_filetree(source_path, suffix_allowlist=['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff'])
@@ -216,13 +240,21 @@ def main():
     )
     parser.add_argument('--source', default='./')
     parser.add_argument('--destination', default='./')
+    parser.add_argument(
+        '--embed-images',
+        action='count',
+        help='''If specified, causes all images to be embedded into the generated
+        HTML files as base64 encoded data URIs. Grows page size, but improves
+        portability.'''
+    )
     args = parser.parse_args()
     source = abspath(args.source)
     dest = abspath(args.destination)
+    embed_images = bool(args.embed_images)
 
     mirror_unzip_cbz(source, dest)
-    create_comic_display_htmlfiles(dest)
-    create_comic_browse_htmlfiles(dest)
+    create_comic_display_htmlfiles(dest, embed_images=embed_images)
+    create_comic_browse_htmlfiles(dest, embed_images=embed_images)
 
 
 if __name__ == '__main__':
