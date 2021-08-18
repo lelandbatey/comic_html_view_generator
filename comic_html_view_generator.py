@@ -20,6 +20,7 @@ PREAMBLE = '''
     margin: 0;
     padding: 0;
     background: lightgrey;
+    font-family: Consolas, "Inconsolata", Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif;
 }
 h1 {
     font-size: 4vw;
@@ -41,23 +42,16 @@ h1 {
     row-gap: 10px;
 }
 
-.preview-grid  * {
-    /* border: 1px solid red; */
-}
-
 .image_list > a > img {
     width: 20vw;
     vertical-align: middle;
 }
 
 .comic_page {
-    font-size: 3vw;
+    font-size: 2.1vw;
     display: flex;
     justify-content: center; /* align horizontal */
     align-items: center; /* align vertical */
-}
-.comic_page > a {
-    vertical-align: middle;
 }
 </style>
 '''
@@ -280,8 +274,12 @@ def create_comic_display_htmlfiles(source_path, embed_images=False, verbose=Fals
         imghtml = "\n".join([linefmt.format(make_image_url(x), x) for x in imgfiles])
         # Link to the next directory of comics if there are more
         if idx < len(ordered_keys) - 1:
-            relative_path_to_next = path.relpath(reltpth, ordered_keys[idx])
-            imghtml += f'\n<h1><a href="../{relative_path_to_next}/">NEXT >></a></h1>'
+            relative_path_to_next = path.relpath(ordered_keys[idx + 1], reltpth)
+            if verbose:
+                dbg_p(
+                    f"\tLinking from source '{reltpth}' to next '{ordered_keys[idx+1]}' via '{relative_path_to_next}'"
+                )
+            imghtml += f'\n<h1><a href="{relative_path_to_next}/">NEXT >></a></h1>'
         contents = PREAMBLE + INDEX_TEMPLATE.format(imagelist=imghtml, description=reltpth)
         with open(path.join(full_dir_path, 'index.html'), 'w+') as indexfile:
             indexfile.write(contents)
@@ -296,7 +294,14 @@ def create_comic_browse_htmlfiles(source_path, embed_images=False, verbose=False
 
     outfoldername = path.split(source_path)[-1]
     prvgrid = '<div class="preview-grid">{preview_rows}</div>'
-    linefmt = '<div class="comic_page"><a href="{foldername}/">{foldername}</a></div><div class="image_list"><a href="{foldername}/">{images}</a></div>'
+    linefmt = '''
+        <a href="{folderpath}/" class="comic_page">
+            {foldername}
+        </a>
+        <div class="image_list">
+            <a href="{foldername}/">{images}</a>
+        </div>
+    '''
     imgsfmt = '<img src="{}" loading="lazy">'
 
     def create_folderprev(foldername, imagefiles):
@@ -306,7 +311,9 @@ def create_comic_browse_htmlfiles(source_path, embed_images=False, verbose=False
         if embed_images:
             make_image_url = lambda imgpath: create_image_datauri(path.join(source_path, imgpath))
         imgshtml = '\n'.join([imgsfmt.format(make_image_url(x)) for x in imgpaths])
-        return linefmt.format(foldername=foldername, images=imgshtml)
+        folderpath = foldername
+        foldername = foldername.replace('/', '/<br>')
+        return linefmt.format(folderpath=folderpath, foldername=foldername, images=imgshtml)
 
     subdir_imgs = build_filetree(source_path, suffix_allowlist=DEFAULT_IMAGE_EXTENSIONS)
 
