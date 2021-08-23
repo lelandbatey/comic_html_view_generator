@@ -78,12 +78,28 @@ def dbg_p(*args, **kwargs):
 
 
 def clean_namelist(namelist, allowed_extensions=None, blocked_names=None):
-    '''Cleans garbage files from the namelist returned by ZipFile.namelist()'''
+    '''Cleans garbage files from the namelist returned by ZipFile.namelist().
+    Builds a new `namelist` from the provided `namelist`, where each entry in
+    the new `namelist` fulfills the following rules:
+    1. Each entry must end in one of the suffixes present in the
+       `allowed_extensions` parameter.
+    2. Each entry must not contain any of the strings present in the
+       `blocked_names` parameter.
+    Note that all string comparisons are done case-insensitively by
+    lowercasing all strings at comparison time.
+    :param namelist: List of string names of files in a zipfile. Produced by
+        `ZipFile.namelist()`
+    :param allowed_extensions: List of strings. The returned list of filenames
+        will contain only entries in `namelist` which end in a suffix present in
+        `allowed_extensions`. Default is: `['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']`
+    :param blocked_names: List of strings. The returned list of filenames will
+        only contain entries in `namelist` which do not have any of the strings
+        in `blocked_names` present within them. Default is: `['.DS_Store', 'Thumbs.db', '__MACOSX', 'desktop.ini']`
+    '''
     if allowed_extensions is None:
         allowed_extensions = DEFAULT_IMAGE_EXTENSIONS
     if blocked_names is None:
         blocked_names = ['.DS_Store', 'Thumbs.db', '__MACOSX', 'desktop.ini']
-    namelist = [x for x in namelist if not '__MACOSX' in x]
     newnamelist = list()
     for x in namelist:
         skip = False
@@ -107,25 +123,25 @@ def build_filetree(source_path, suffix_allowlist=None):
     to a folder (P) on disk within source_path. Each value is a list of files
     within that path P. Each list of files will only contain files with
     suffixes present in the `suffix_allowlist` parameter. By default,
-    suffix_allowlist is the following list:
-        ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']
-    Given a directory structure like the following:
-        /
-            a/
-                foo.jpg
-                b/
-                    qux.bmp
-            c/
-                yah.tiff
-                zap.png
-            d/
-                notfound.txt
-    Calling `build_filetree('/')` would return a dictionary of the following:
-        {
-            'a': ['foo.jpg'],
-            'a/b': ['qux.bmp'],
-            'c': ['yah.tiff', 'zap.png']
-        }
+    suffix_allowlist is the following list: ::
+    > ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']
+    Given a directory structure like the following: ::
+    > /
+    >     a/
+    >         foo.jpg
+    >         b/
+    >             qux.bmp
+    >     c/
+    >         yah.tiff
+    >         zap.png
+    >     d/
+    >         notfound.txt
+    Calling `build_filetree('/')` would return a dictionary of the following: ::
+    > {
+    >     'a': ['foo.jpg'],
+    >     'a/b': ['qux.bmp'],
+    >     'c': ['yah.tiff', 'zap.png']
+    > }
     '''
     if suffix_allowlist is None:
         suffix_allowlist = DEFAULT_IMAGE_EXTENSIONS
@@ -147,8 +163,13 @@ def build_filetree(source_path, suffix_allowlist=None):
 
 
 def create_image_datauri(full_imagepath):
-    '''Creates a data URI suitable to be used in the 'src' attribute of an HTML
-    <img> tag, allowing for totally self-contained HTML documents.'''
+    '''Creates a data URI out of an image suitable to be used in the 'src'
+    attribute of an HTML <img> tag, allowing for totally self-contained HTML
+    documents. While a normal `<img>` tag would embed an image into an HTML
+    page with a "src" param like this `<img src="./path_to_img.png">`, an image
+    may be directly embedded into the HTML via a data URI in the "src" param
+    containing the binary contents of the image but base64 encoded. This
+    function is for creating said "data URIs".'''
     mtype, _ = mimetypes.guess_type(full_imagepath)
     b64data = None
     with open(full_imagepath, 'rb') as img:
@@ -160,7 +181,37 @@ def create_image_datauri(full_imagepath):
 
 def mirror_unzip_cbz(source_path, dest_path, maintain_existing_images=False, verbose=False):
     ''' Replicates a directory structure with CBZ files in it into a new
-    location, but with the cbz files expanded into directories with images. '''
+    location, but with the CBZ files expanded into directories with only the
+    images from each CBZ. So if we have a `source_path` to a folder with the
+    following contents: ::
+    > # source_path is '/foo'
+    > /foo/
+    >     volume01.cbz
+    >     volume02.zip
+    > # /foo/volume01.cbz contents
+    > issue01/img01.png
+    > issue01/img02.png
+    > issue02/img01.png
+    > # /foo/volume02.zip contents
+    > issue03/img01.png
+    > issue04/img01.png
+    Then calling `mirror_unzip_cbz('/foo', '/bar')` (assuming `/bar` is an
+    empty directory) will cause `/bar` to be populated as follows: ::
+    > # dest_path is '/bar', an empty directory to start with.
+    > # '/bar' will look as follows after running mirror_unzip_cbz()
+    > /bar/
+    >     volume01/
+    >         issue01/
+    >             img01.png
+    >             img02.png
+    >         issue02/
+    >             img01.png
+    >     volume02/
+    >         issue03/
+    >             img01.png
+    >         issue04/
+    >             img01.png
+    '''
     if verbose:
         dbg_p(f"extracting cbz files from '{source_path}' into '{dest_path}'")
     # Get a directory structure of all folders with cbz files in them, as a
