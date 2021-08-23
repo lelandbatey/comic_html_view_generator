@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from os import path
 from datetime import datetime, timezone
 import mimetypes
@@ -269,7 +267,11 @@ def mirror_unzip_cbz(source_path, dest_path, maintain_existing_images=False, ver
 
 
 def mirror_images_directory(
-    source_path, dest_path, maintain_existing_images=False, extensions_allowlist=None, verbose=False
+    source_path,
+    dest_path,
+    maintain_existing_images=False,
+    extensions_allowlist=None,
+    verbose=False
 ):
     ''' Replicate a directory structure with images in it into a new location,
     but with only the images. By default copies files with the following
@@ -306,9 +308,12 @@ def mirror_images_directory(
                 if path.isfile(full_new_image_path):
                     continue
             if full_new_image_path == full_path_to_imgf:
-                dbg_p(f"ERR: Cannot copy file {full_path_to_imgf} into itself; skipping copy operation")
+                dbg_p(
+                    f"ERR: Cannot copy file {full_path_to_imgf} into itself; skipping copy operation"
+                )
                 continue
-            with open(full_path_to_imgf, 'rb') as sourceimg, open(full_new_image_path, 'wb') as destimg:
+            with open(full_path_to_imgf,
+                      'rb') as sourceimg, open(full_new_image_path, 'wb') as destimg:
                 shutil.copyfileobj(sourceimg, destimg)
 
 
@@ -333,7 +338,9 @@ def create_comic_display_htmlfiles(source_path, embed_images=False, verbose=Fals
         linefmt = '<div style="text-align:center;" class="imgbox"><img src="{}" style="margin-top: 40px;" class="center-fit"><p>{}</p></div>'
         make_image_url = lambda imgpath: imgpath
         if embed_images:
-            make_image_url = lambda imgpath, fp=full_dir_path: create_image_datauri(path.join(fp, imgpath))
+            make_image_url = lambda imgpath, fp=full_dir_path: create_image_datauri(
+                path.join(fp, imgpath)
+            )
         imghtml = "\n".join([linefmt.format(make_image_url(x), x) for x in imgfiles])
         # Link to the next directory of comics if there are more
         if idx < len(ordered_keys) - 1:
@@ -388,7 +395,9 @@ def create_comic_browse_htmlfiles(source_path, embed_images=False, verbose=False
 
     preview_rows = "\n".join(rendered_rows)
     preview_grid = prvgrid.format(preview_rows=preview_rows)
-    browse_contents = PREAMBLE + INDEX_TEMPLATE.format(description=outfoldername, imagelist=preview_grid)
+    browse_contents = PREAMBLE + INDEX_TEMPLATE.format(
+        description=outfoldername, imagelist=preview_grid
+    )
     with open(path.join(source_path, "BROWSE_COMIC_HERE.html"), 'w') as browse_file:
         browse_file.write(browse_contents)
 
@@ -402,7 +411,10 @@ def main():
     '''
     )
     parser.add_argument(
-        '-v', '--verbose', action='count', help='If set, logs additional information to stderr during execution'
+        '-v',
+        '--verbose',
+        action='count',
+        help='If set, logs additional information to stderr during execution'
     )
     parser.add_argument(
         '--source',
@@ -448,12 +460,16 @@ def main():
     embed_images = bool(args.embed_images)
     maintain_existing_images = bool(args.maintain_existing_images)
 
-    mirror_unzip_cbz(source, dest, maintain_existing_images=maintain_existing_images, verbose=verbose)
+    mirror_unzip_cbz(
+        source, dest, maintain_existing_images=maintain_existing_images, verbose=verbose
+    )
     # If source and destination are the same folder, we'd end up opening the
     # same file in both read and write mode, and copying itself, which is bad
     # since it could corrupt or delete the image files.
     if source != dest:
-        mirror_images_directory(source, dest, maintain_existing_images=maintain_existing_images, verbose=verbose)
+        mirror_images_directory(
+            source, dest, maintain_existing_images=maintain_existing_images, verbose=verbose
+        )
     create_comic_display_htmlfiles(dest, embed_images=embed_images, verbose=verbose)
     create_comic_browse_htmlfiles(dest, embed_images=embed_images, verbose=verbose)
 
