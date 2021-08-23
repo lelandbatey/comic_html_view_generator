@@ -81,12 +81,15 @@ def clean_namelist(namelist, allowed_extensions=None, blocked_names=None):
     '''Cleans garbage files from the namelist returned by ZipFile.namelist().
     Builds a new `namelist` from the provided `namelist`, where each entry in
     the new `namelist` fulfills the following rules:
+
     1. Each entry must end in one of the suffixes present in the
        `allowed_extensions` parameter.
     2. Each entry must not contain any of the strings present in the
        `blocked_names` parameter.
+
     Note that all string comparisons are done case-insensitively by
     lowercasing all strings at comparison time.
+
     :param namelist: List of string names of files in a zipfile. Produced by
         `ZipFile.namelist()`
     :param allowed_extensions: List of strings. The returned list of filenames
@@ -124,24 +127,29 @@ def build_filetree(source_path, suffix_allowlist=None):
     within that path P. Each list of files will only contain files with
     suffixes present in the `suffix_allowlist` parameter. By default,
     suffix_allowlist is the following list: ::
-    > ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']
+
+        ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']
+
     Given a directory structure like the following: ::
-    > /
-    >     a/
-    >         foo.jpg
-    >         b/
-    >             qux.bmp
-    >     c/
-    >         yah.tiff
-    >         zap.png
-    >     d/
-    >         notfound.txt
+
+        /
+            a/
+                foo.jpg
+                b/
+                    qux.bmp
+            c/
+                yah.tiff
+                zap.png
+            d/
+                notfound.txt
+
     Calling `build_filetree('/')` would return a dictionary of the following: ::
-    > {
-    >     'a': ['foo.jpg'],
-    >     'a/b': ['qux.bmp'],
-    >     'c': ['yah.tiff', 'zap.png']
-    > }
+
+        {
+            'a': ['foo.jpg'],
+            'a/b': ['qux.bmp'],
+            'c': ['yah.tiff', 'zap.png']
+        }
     '''
     if suffix_allowlist is None:
         suffix_allowlist = DEFAULT_IMAGE_EXTENSIONS
@@ -184,33 +192,36 @@ def mirror_unzip_cbz(source_path, dest_path, maintain_existing_images=False, ver
     location, but with the CBZ files expanded into directories with only the
     images from each CBZ. So if we have a `source_path` to a folder with the
     following contents: ::
-    > # source_path is '/foo'
-    > /foo/
-    >     volume01.cbz
-    >     volume02.zip
-    > # /foo/volume01.cbz contents
-    > issue01/img01.png
-    > issue01/img02.png
-    > issue02/img01.png
-    > # /foo/volume02.zip contents
-    > issue03/img01.png
-    > issue04/img01.png
+
+        # source_path is '/foo'
+        /foo/
+            volume01.cbz
+            volume02.zip
+        # /foo/volume01.cbz contents
+        issue01/img01.png
+        issue01/img02.png
+        issue02/img01.png
+        # /foo/volume02.zip contents
+        issue03/img01.png
+        issue04/img01.png
+
     Then calling `mirror_unzip_cbz('/foo', '/bar')` (assuming `/bar` is an
     empty directory) will cause `/bar` to be populated as follows: ::
-    > # dest_path is '/bar', an empty directory to start with.
-    > # '/bar' will look as follows after running mirror_unzip_cbz()
-    > /bar/
-    >     volume01/
-    >         issue01/
-    >             img01.png
-    >             img02.png
-    >         issue02/
-    >             img01.png
-    >     volume02/
-    >         issue03/
-    >             img01.png
-    >         issue04/
-    >             img01.png
+
+        # dest_path is '/bar', an empty directory to start with.
+        # '/bar' will look as follows after running mirror_unzip_cbz()
+        /bar/
+            volume01/
+                issue01/
+                    img01.png
+                    img02.png
+                issue02/
+                    img01.png
+            volume02/
+                issue03/
+                    img01.png
+                issue04/
+                    img01.png
     '''
     if verbose:
         dbg_p(f"extracting cbz files from '{source_path}' into '{dest_path}'")
@@ -262,7 +273,8 @@ def mirror_images_directory(
 ):
     ''' Replicate a directory structure with images in it into a new location,
     but with only the images. By default copies files with the following
-    extensions (modifiable via the 'extensions_allowlist' param):
+    extensions (modifiable via the 'extensions_allowlist' param): ::
+
         .jpg
         .jpeg
         .png
