@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "comic_html_view_generator"
-version = "0.1.1"
+version = "0.1.2"
 description = ""
 authors = ["Leland Batey <lelandbatey@gmail.com>"]
 
