@@ -7,6 +7,17 @@ static HTML files for viewing comic books. Given a directory with images or
 and an overall "browse all the comics here" HTML page which will list all the
 comics books which have had a readable HTML file generated from them.
 
+Installation
+------------
+
+Install this library via Pip: ::
+
+    pip install comic-html-view-generator
+
+Use with: ::
+
+    python -m comic_html_view_generator --source <SOURCE_PATH> --destination <DESTINATION_PATH>
+
 Assumptions
 -----------
 

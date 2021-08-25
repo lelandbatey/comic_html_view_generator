@@ -5,7 +5,6 @@ static HTML files for viewing comic books. Given a directory with images or
 and an overall "browse all the comics here" HTML page which will list all the
 comics books which have had a readable HTML file generated from them.
 '''
-__version__ = '0.1.0'
 
 from .chvg import (
     create_comic_display_htmlfiles,

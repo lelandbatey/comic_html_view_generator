@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "comic_html_view_generator"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Leland Batey <lelandbatey@gmail.com>"]
 
@@ -11,6 +11,7 @@ python = "^3.8"
 pytest = "^5.2"
 Sphinx = "^4.1.2"
 sphinx-rtd-theme = "^0.5.2"
+twine = "^3.4.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -1,21 +1,16 @@
-'''
-comic_html_view_generator
--------------------------
-
-comic_html_view_generator is a command-line tool and library for creating
-static HTML files for viewing comic books. Given a directory with images or
-.cbz files in it, it'll create HTML files which embed those images in order,
-and an overall "browse all the comics here" HTML page which will list all the
-comics books which have had a readable HTML file generated from them.
-'''
-
 from setuptools import setup, find_packages
+from os import path as pth
 import ast
 import re
 
-_version_re = re.compile(r'__version__\s+=\s+(.*)')
 
-with open('comic_html_view_generator/__init__.py', 'rb') as f:
+def _read(fname):
+    return open(pth.join(pth.dirname(__file__), fname)).read()
+
+
+# Derive our version number from the version number definited in pyproject.toml
+_version_re = re.compile(r'version\s+=\s+(.*)')
+with open('pyproject.toml', 'rb') as f:
     version = str(ast.literal_eval(_version_re.search(f.read().decode('utf-8')).group(1)))
 
 __license__ = 'GPLv3'
@@ -29,7 +24,7 @@ setup(
     author='Leland Batey',
     author_email='lelandbatey@lelandbatey.com',
     description='HTML generator to view comic books',
-    long_description=__doc__,
+    long_description=_read('README.rst'),
     packages=find_packages(),
     install_requires=[],
     classifiers=[
@@ -43,5 +38,8 @@ setup(
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Multimedia :: Graphics :: Viewers',
         'Topic :: Text Processing :: Markup :: HTML',
-    ]
+    ],
+    entry_points={
+        'console_scripts': ['comic_html_view_generator=comic_html_view_generator.chvg:main']
+    }
 )
