@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from os import path
 from datetime import datetime, timezone
 import mimetypes
@@ -231,6 +232,11 @@ def mirror_unzip_cbz(source_path, dest_path, maintain_existing_images=False, ver
     source_path = path.abspath(source_path)
     dest_path = path.abspath(dest_path)
     cbz_folders = build_filetree(source_path, suffix_allowlist=['.cbz', '.zip'])
+    if verbose:
+        for pth, files in cbz_folders.items():
+            dbg_p(f"{pth}:")
+            for f in files:
+                dbg_p(f"\t{f}")
 
     # Actually create the mirrored directory structure, then create directories
     # for each zipfile, then unzip all images into the directory for each
@@ -249,16 +255,29 @@ def mirror_unzip_cbz(source_path, dest_path, maintain_existing_images=False, ver
             # file extension
             foldername_for_images = '.'.join(path.split(full_path_to_zf)[-1].split('.')[:-1])
             full_new_imgspath = path.join(full_newpath, foldername_for_images)
+            if verbose:
+                dbg_p(f"\t\tzfname               : {zfname}")
+                dbg_p(f"\t\tfull path to zipfile : {full_path_to_zf}")
+                dbg_p(f"\t\tfoldername_for_images: {foldername_for_images}")
+                dbg_p(f"\t\tfull_new_imgspath    : {full_new_imgspath}")
             pathlib.Path(full_new_imgspath).mkdir(parents=True, exist_ok=True)
             zfp = zipfile.ZipFile(full_path_to_zf)
             for compr_img_path in clean_namelist(zfp.namelist()):
-                compr_img_name = path.split(compr_img_path)[-1]
-                full_new_image_path = path.join(full_new_imgspath, compr_img_name)
-
+                # Ensure that we maintain the directory structure within the
+                # zip file in addition to the files themselves.
+                compr_img_dirname = path.dirname(compr_img_path)
+                full_new_image_dirname = path.join(full_new_imgspath, compr_img_dirname)
+                full_new_image_path = path.join(full_new_imgspath, compr_img_path)
+                if verbose:
+                    dbg_p(f"\t\t\tcompr_img_path         : {compr_img_path}")
+                    dbg_p(f"\t\t\tcompr_img_dirname      : {compr_img_dirname}")
+                    dbg_p(f"\t\t\tfull_new_image_dirname : {full_new_image_dirname}")
+                    dbg_p(f"\t\t\tfull_new_image_path    : {full_new_image_path}")
                 if maintain_existing_images:
                     if path.isfile(full_new_image_path):
                         continue
 
+                pathlib.Path(full_new_image_dirname).mkdir(parents=True, exist_ok=True)
                 # Have to manually copy only the file out of it's old location and into the new one.
                 source = zfp.open(compr_img_path)
                 target = open(full_new_image_path, 'wb')
@@ -369,7 +388,7 @@ def create_comic_browse_htmlfiles(source_path, embed_images=False, verbose=False
             {foldername}
         </a>
         <div class="image_list">
-            <a href="{foldername}/">{images}</a>
+            <a href="{folderpath}/">{images}</a>
         </div>
     '''
     imgsfmt = '<img src="{}" loading="lazy">'
