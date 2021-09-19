@@ -52,6 +52,79 @@ h1 {
     justify-content: center; /* align horizontal */
     align-items: center; /* align vertical */
 }
+
+/* Exists so we can prevent scrolling of the background page when we open the viewing modal. */
+.modal-open {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 0;
+    position: fixed;
+    overflow: hidden;
+}
+#cover {
+    position:fixed;
+    top: 0;
+    left: 0;
+    background: rgba(0,0,0,0.9);
+    width: 100%;
+    height: 100%;
+    -webkit-overflow-scrolling: touch;
+    overflow-y: scroll;
+}
+
+.fullimg {
+	max-width:  100%;
+	max-height: 100%;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	margin: auto;
+	overflow: auto;
+	position: fixed;
+	object-fit: contain;
+}
+#lefthalf {
+	max-height: 100%;
+    width: 20%;
+	top: 0;
+    left: 0;
+	right: 0;
+	bottom: 0;
+	/*margin: auto;*/
+	overflow: auto;
+	position: fixed;
+    background: rgba(0,0,0,0);
+    background: linear-gradient(90deg, rgba(90,90,90, 1) 0%, rgba(90,90,90, 0) 95%)
+}
+#righthalf {
+	max-height: 100%;
+    width: 20%;
+	top: 0;
+    left: 80%;
+	right: 0;
+	bottom: 0;
+	margin: auto;
+	overflow: auto;
+	position: fixed;
+    background: rgba(0,0,0,0);
+    background: linear-gradient(270deg, rgba(90,90,90, 1) 0%, rgba(90,90,90, 0) 95%)
+}
+#closebutton {
+    max-height: 200px;
+    max-width: 200px;
+    width: min(10vh, 10vw);
+    height: min(10vh, 10vw);
+	top: 0;
+    left: 0;
+	right: 0;
+	bottom: 0;
+    position: fixed;
+    background: rgba(0, 0, 0, 0);
+}
+
+
 </style>
 '''
 
@@ -63,7 +136,252 @@ INDEX_TEMPLATE = '''
 <body>
 <h1 style="margin-bottom: 80px;">{description}</h1>
 {imagelist}
+
+<div id="cover" style="display: none;">
+		<img src="" class="fullimg">
+        <div id="lefthalf"></div>
+        <div id="righthalf"></div>
+        <svg id="closebutton" xmlns="https://www.w3.org/2000/svg" viewBox="0 0 100 100">
+          <line x1="0" y1="0" x2="100" y2="100" stroke-width="20" stroke="#FFF" />
+          <line x1="0" y1="100" x2="100" y2="0" stroke-width="20" stroke="#FFF" />
+        </svg>
+</div>
 </body>
+'''
+POST_INDEX = '''
+<script type="text/javascript">
+
+/*
+Returns a list of strings, each a path to an image, taken from the 'src'
+attributes of 'img' elements in the page, in the order they appear in the tree.
+Each 'src' only shows up in the list once, even if there are multiple images
+with that 'src' attribute on the page; later 'img' with the same 'src' as
+earlier 'img' already in the list will not be added to the list.
+*/
+function find_all_images() {
+	var srcs = {};
+	var allimgs = [];
+	var allElems = document.querySelectorAll('img');
+	for (var i = 0; i < allElems.length; i++) {
+		var el = allElems[i];
+		if (el.src in srcs) {
+			continue;
+		}
+		allimgs.push(el.src);
+		srcs[el.src] = 1;
+	}
+	return allimgs;
+}
+
+function getImgPath(url) {
+	var u = new URL(url);
+	return u.pathname;
+}
+
+function parse_hash() {
+	let conf = {};
+	conf.pageview = false;
+	conf.imgpath = '';
+	let hash = window.location.hash;
+	let pieces = hash.split(':');
+	if (pieces.length === 1) {
+		return conf;
+	}
+	// Yes, this fragment is to view an individual page.
+	conf.pageview = true;
+	conf.imgpath = pieces[1];
+	return conf;
+}
+
+let Fadeout = class {
+	constructor(clicklisten, nodisplay, mostlygone) {
+		this.clicklisten = clicklisten;
+		this.nodisplay = nodisplay;
+		this.mostlygone = mostlygone;
+		this.state = 'visible';
+
+		this.clicklisten.addEventListener('click', (event) => {
+			if (this.state === 'visible') {
+				this.hide();
+			} else {
+				this.reveal();
+			}
+		});
+	}
+	hide() {
+		for (var i = 0; i < this.nodisplay.length; i++) {
+			let elhide = this.nodisplay[i];
+			elhide.style.display = "none";
+		}
+		for (var i = 0; i < this.mostlygone.length; i++) {
+			let elhide = this.mostlygone[i];
+			elhide.style.opacity = 0.01;
+		}
+		this.state = 'hidden';
+	}
+	reveal() {
+		for (var i = 0; i < this.nodisplay.length; i++) {
+			let elhide = this.nodisplay[i];
+			elhide.style.display = "";
+		}
+		for (var i = 0; i < this.mostlygone.length; i++) {
+			let elhide = this.mostlygone[i];
+			elhide.style.opacity = 1.00;
+		}
+		this.state = 'visible';
+	}
+}
+
+let ImagesPageSlideshow = class {
+	/*
+	ImagesPageSlideshow holds the state for a PageSlideshow view and exposes
+	ways to modify that state.
+	@param parentview - Element which is the absolutely positioned "overlay" of the page.
+	@param imageview - Element within the parentview which is an image where
+		the 'src' attribute may be changed in order to change which image is
+		visible on the page.
+	@param closebutton - Element which, when clicked/tapped, should "close" the overlay.
+	@param leftbutton - Element which, when clicked/tapped, causes the view to
+		move to the previous image in the list, like going backwards a page in
+		a book.
+	@param rightbutton - Element which, when clicked/tapped, causes the view to
+		move to the next image in the list, like going to the next page in a
+		book.
+	@param srclist - A list of strings, each string a path to an image.
+	*/
+	constructor(parentview, imageview, closebutton, leftbutton, rightbutton, srclist) {
+		this.parentview = parentview;
+		this.imageview = imageview;
+		this.closebutton = closebutton;
+		this.leftbutton = leftbutton;
+		this.rightbutton = rightbutton;
+		this.srclist = srclist;
+
+		this.fader = new Fadeout(imageview, [closebutton], [leftbutton, rightbutton]);
+		this.fader.state = this.state;
+
+		this.leftbutton.addEventListener('click', (event)=>{this.previousPage(event)});
+		this.rightbutton.addEventListener('click', (event)=>{this.nextPage(event)});
+		this.closebutton.addEventListener('click', (event)=>{this.close();})
+		// Need our window to track how far it's scrolled
+	}
+
+	get state() {
+		if (this.parentview.style.display == "") {
+			return "visible";
+		};
+		return "hidden";
+	}
+
+	previousPage(event) {
+		let currentSrc = this.imageview.src;
+		let currentPageIndex = this.srclist.indexOf(currentSrc);
+		if (currentPageIndex === 0) {
+			return;
+		}
+		let newsrc = this.srclist[currentPageIndex-1];
+		this.imageview.src = newsrc;
+		window.location.hash = `#pageview:${getImgPath(newsrc)}`;
+	}
+
+	nextPage(event) {
+		let currentSrc = this.imageview.src;
+		let currentPageIndex = this.srclist.indexOf(currentSrc);
+		if (currentPageIndex === this.srclist.length-1) {
+			return;
+		}
+		let newsrc = this.srclist[currentPageIndex+1];
+		this.imageview.src = newsrc;
+		window.location.hash = `#pageview:${getImgPath(newsrc)}`;
+	}
+
+	close() {
+		console.log("closing, state is:", this.state);
+		if (this.state == "hidden") {
+			return;
+		}
+		this.fader.hide();
+		console.log("closing, making display as none", this.state);
+		this.parentview.style.display = "none";
+		document.querySelector('body').classList.remove('modal-open');
+		window.scrollTo(0, this._scrollY);
+		let currentSrc = this.imageview.src;
+		window.location.hash = `#${getImgPath(currentSrc)}`;
+	}
+
+	open() {
+		if (this.state == "visible") {
+			return;
+		}
+		this.fader.reveal();
+		this.parentview.style.display = "";
+		this._scrollY = window.scrollY;
+		document.querySelector('body').classList.add('modal-open');
+	}
+	/* Make the ImagesPageSlideshow visible and transition it to the image
+	 * specified in 'path'. If 'path' is not present in the original srclist
+	 * provided to this ImagesPageSlideshow, then an exception is thrown.
+	 */
+	openImg(path) {
+		if (this.state === "visible") {
+			return;
+		}
+		let newPageIndex = this.srclist.indexOf(path);
+		if (newPageIndex === -1) {
+			throw `Image at path '${path}' is not present in list of images`
+		}
+		let newsrc = this.srclist[newPageIndex];
+		this.imageview.src = newsrc;
+		window.location.hash = `#pageview:${getImgPath(newsrc)}`;
+		this.open();
+	}
+
+};
+
+document.slideshow = new ImagesPageSlideshow(
+	document.querySelector('#cover'),
+	document.querySelector('.fullimg'),
+	document.querySelector('#closebutton'),
+	document.querySelector('#lefthalf'),
+	document.querySelector('#righthalf'),
+	find_all_images(),
+);
+console.log(document.slideshow);
+var slideshow = document.slideshow;
+
+
+
+var _imgelems = document.querySelectorAll('.imgbox > img');
+for (var i = 0; i < _imgelems.length; i++) {
+	let imgelem = _imgelems[i];
+	var src = getImgPath(imgelem.src);
+	let imglabel = imgelem.parentNode.querySelector('p');
+	imgelem.addEventListener('click', function(event){
+		event.preventDefault();
+		document.slideshow.openImg(imgelem.src);
+	});
+
+	imgelem.setAttribute('id', src);
+
+	var foo = document.createElement('a');
+	foo.href = "#"+src;
+	imglabel.parentNode.insertBefore(foo, imglabel);
+	foo.appendChild(imglabel);
+
+	var bar = document.createElement('a');
+	bar.href = "#"+src;
+	imgelem.parentNode.insertBefore(bar, imgelem);
+	bar.appendChild(imgelem);
+}
+
+let _hashinfo = parse_hash();
+if (_hashinfo.pageview === true) {
+	let imgurl = new URL(_hashinfo.imgpath, window.location.protocol + "//" + window.location.host + window.location.pathname);
+	document.slideshow.openImg(imgurl.href);
+}
+
+
+</script>
 </html>
 '''
 
@@ -369,7 +687,7 @@ def create_comic_display_htmlfiles(source_path, embed_images=False, verbose=Fals
                     f"\tLinking from source '{reltpth}' to next '{ordered_keys[idx+1]}' via '{relative_path_to_next}'"
                 )
             imghtml += f'\n<h1><a href="{relative_path_to_next}/">NEXT >></a></h1>'
-        contents = PREAMBLE + INDEX_TEMPLATE.format(imagelist=imghtml, description=reltpth)
+        contents = PREAMBLE + INDEX_TEMPLATE.format(imagelist=imghtml, description=reltpth)+POST_INDEX
         with open(path.join(full_dir_path, 'index.html'), 'w+') as indexfile:
             indexfile.write(contents)
 
