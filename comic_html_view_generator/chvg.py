@@ -8,6 +8,7 @@ import base64
 import shutil
 import sys
 import os
+import re
 
 import zipfile
 
@@ -484,6 +485,9 @@ def build_filetree(source_path, suffix_allowlist=None):
         if not reltpth in desired_files:
             desired_files[reltpth] = list()
         desired_files[reltpth].extend(zfiles)
+    # We want to sort files in directories by their human-indexed numerical file name
+    for reltpth in list(desired_files.keys()):
+        desired_files[reltpth] = sort_nicely(desired_files[reltpth])
     return desired_files
 
 
@@ -654,6 +658,16 @@ def mirror_images_directory(
                 shutil.copyfileobj(sourceimg, destimg)
 
 
+def sort_nicely(l):
+    '''Sort the given list in the way that humans expect.
+    Taken from the codinghorror blog post:
+        https://blog.codinghorror.com/sorting-for-humans-natural-sort-order/
+    '''
+    convert = lambda text: int(text) if text.isdigit() else text
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
+
+
 def create_comic_display_htmlfiles(source_path, embed_images=False, verbose=False):
     '''Finds directories with images in them, then creates "index.html" files
     in each directory which embed those images in alphanumeric order. Does not
@@ -665,7 +679,7 @@ def create_comic_display_htmlfiles(source_path, embed_images=False, verbose=Fals
             f"based on image dirs in {source_path}",
         )
     image_folders = build_filetree(source_path, suffix_allowlist=DEFAULT_IMAGE_EXTENSIONS)
-    ordered_keys = sorted(image_folders.keys())
+    ordered_keys = sort_nicely(image_folders.keys())
     for idx in range(len(ordered_keys)):
         reltpth = ordered_keys[idx]
         imgfiles = image_folders[reltpth]
@@ -687,7 +701,9 @@ def create_comic_display_htmlfiles(source_path, embed_images=False, verbose=Fals
                     f"\tLinking from source '{reltpth}' to next '{ordered_keys[idx+1]}' via '{relative_path_to_next}'"
                 )
             imghtml += f'\n<h1><a href="{relative_path_to_next}/">NEXT >></a></h1>'
-        contents = PREAMBLE + INDEX_TEMPLATE.format(imagelist=imghtml, description=reltpth)+POST_INDEX
+        contents = PREAMBLE + INDEX_TEMPLATE.format(
+            imagelist=imghtml, description=reltpth
+        ) + POST_INDEX
         with open(path.join(full_dir_path, 'index.html'), 'w+') as indexfile:
             indexfile.write(contents)
 
@@ -725,7 +741,7 @@ def create_comic_browse_htmlfiles(source_path, embed_images=False, verbose=False
     subdir_imgs = build_filetree(source_path, suffix_allowlist=DEFAULT_IMAGE_EXTENSIONS)
 
     rendered_rows = list()
-    for k in sorted(subdir_imgs.keys()):
+    for k in sort_nicely(subdir_imgs.keys()):
         foldername = k
         imagefiles = subdir_imgs[k]
         rendered_rows.append(create_folderprev(foldername, imagefiles))
