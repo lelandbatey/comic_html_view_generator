@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from os import path
 from datetime import datetime, timezone
+from urllib.parse import quote
 import mimetypes
 import argparse
 import pathlib
@@ -694,7 +695,7 @@ def create_comic_display_htmlfiles(source_path, embed_images=False, verbose=Fals
         if verbose:
             dbg_p(f"\tcreating index.html in folder '{full_dir_path}'")
         linefmt = '<div style="text-align:center;" class="imgbox"><img src="{}" style="margin-top: 40px;" class="center-fit"><p>{}</p></div>'
-        make_image_url = lambda imgpath: imgpath
+        make_image_url = lambda imgpath: quote(imgpath)
         if embed_images:
             make_image_url = lambda imgpath, fp=full_dir_path: create_image_datauri(
                 path.join(fp, imgpath)
@@ -737,7 +738,7 @@ def create_comic_browse_htmlfiles(source_path, embed_images=False, verbose=False
     def create_folderprev(foldername, imagefiles):
         imgpaths = imagefiles[:3]
         imgpaths = [path.join(foldername, x) for x in imgpaths]
-        make_image_url = lambda imgpath: imgpath
+        make_image_url = lambda imgpath: quote(imgpath)
         if embed_images:
             make_image_url = lambda imgpath: create_image_datauri(path.join(source_path, imgpath))
         imgshtml = '\n'.join([imgsfmt.format(make_image_url(x)) for x in imgpaths])
