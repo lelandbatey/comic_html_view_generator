@@ -19,8 +19,10 @@ PREAMBLE = '''
 * {
     margin: 0;
     padding: 0;
-    background: lightgrey;
     font-family: Consolas, "Inconsolata", Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace, serif;
+}
+body {
+    background: lightgrey;
 }
 h1 {
     font-size: 4vw;
@@ -62,6 +64,7 @@ h1 {
     top: 0;
     position: fixed;
     overflow: hidden;
+    background: black;
 }
 #cover {
     position:fixed;
@@ -71,12 +74,17 @@ h1 {
     width: 100%;
     height: 100%;
     -webkit-overflow-scrolling: touch;
-    overflow-y: scroll;
+    overflow-y: hidden;
 }
 
 .fullimg {
 	max-width:  100%;
 	max-height: 100%;
+	/* Setting the height to 100% with max-width/height of 100% and
+	'object-fit: contain' allows the image to always scale to fit the
+	viewport as large as it can. */
+	height: 100%;
+	object-fit: contain;
 	top: 0;
 	left: 0;
 	right: 0;
@@ -84,7 +92,6 @@ h1 {
 	margin: auto;
 	overflow: auto;
 	position: fixed;
-	object-fit: contain;
 }
 #lefthalf {
 	max-height: 100%;
@@ -159,10 +166,10 @@ Each 'src' only shows up in the list once, even if there are multiple images
 with that 'src' attribute on the page; later 'img' with the same 'src' as
 earlier 'img' already in the list will not be added to the list.
 */
-function find_all_images() {
+function find_all_images(queryStr = '.imgbox img') {
 	var srcs = {};
 	var allimgs = [];
-	var allElems = document.querySelectorAll('img');
+	var allElems = document.querySelectorAll(queryStr);
 	for (var i = 0; i < allElems.length; i++) {
 		var el = allElems[i];
 		if (el.src in srcs) {
@@ -216,7 +223,7 @@ let Fadeout = class {
 		}
 		for (var i = 0; i < this.mostlygone.length; i++) {
 			let elhide = this.mostlygone[i];
-			elhide.style.opacity = 0.01;
+			elhide.style.opacity = 0.00;
 		}
 		this.state = 'hidden';
 	}
